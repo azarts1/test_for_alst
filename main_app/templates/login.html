@@ -1,0 +1,128 @@
+<head>
+    <title>LOGIN</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+<form>
+    <table class="table_price">
+        <caption>Users</caption>
+        <tr>
+            <th>Login</th>
+            <th colspan="1">Password</th>
+        </tr>
+        <tr>
+            <th><input id="username" type="text" name="username"/></th>
+            <th><input id="password" type="password" name="password"/></th>
+            <th><button id="Sing_in">Sing in</button></th>
+        </tr>
+    </table>
+</form>
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#Sing_in").click(function (e) {
+            e.preventDefault();
+            $.ajax({
+                type: "POST",
+                url: "/authorization/token",
+                data: JSON.stringify({
+                    username: $("#username").val(),
+                    password: $("#password").val()
+                }),
+                headers: {
+                    "Authorization": localStorage.getItem('token'),
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                success: function (result) {
+                    window.location.href = '/users'
+                    localStorage.setItem('token', result.access_token);
+                },
+                error: function (result) {
+                    alert('Неверный логин или пароль');
+                }
+            });
+        });
+    })
+        function loadPage(id) {
+            $.ajax({
+                async: false,
+                type: "POST",
+                url: "/authorization/check/",
+                data: JSON.stringify({
+                    token: localStorage.getItem('token')
+                }),
+                headers: {
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                success: function (result) {
+                    window.location.href = '/users'
+                },
+                error: function (result) {
+                    if (result.status === 401) {
+                    }
+                    if (result.status === 403) {
+                        alert(result.statusText)
+                    }
+                }
+            });
+        }
+
+        window.onload = loadPage;
+</script>
+
+
+<style>
+    .table_price {
+        margin: auto;
+        border-collapse: collapse;
+        border-left: 3px solid #198d1e;
+        border-right: 3px solid #198d1e;
+        border-bottom: 3px solid #198d1e;
+    }
+
+    .table_price caption {
+        background: #198d1e;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, .3);
+        color: white;
+        font-style: normal;
+        font-size: 26px;
+        text-align: center;
+        margin: 0;
+    }
+
+    .table_price td, .table_price th {
+        padding: 10px;
+    }
+
+    .table_price th {
+        text-align: left;
+        font-size: 18px;
+    }
+
+    .table_price tr:nth-child(2n) {
+        background: #E5E5E5;
+    }
+
+    .table_price td:last-of-type {
+        text-align: center;
+    }
+
+    .table_price button {
+        display: inline-block;
+        padding: 5px 10px;
+        background: #47b928;
+        box-shadow: 2px 2px 0 0 #8ad583;
+        position: relative;
+    }
+
+    .table_price button:hover {
+        box-shadow: none;
+        top: 2px;
+        left: 2px;
+    }
+</style>

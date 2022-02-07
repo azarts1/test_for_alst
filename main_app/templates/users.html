@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<head id="myDiv">
+    <title>USERS</title>
+    <script
+            src="https://code.jquery.com/jquery-3.6.0.js"
+            integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
+            crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/ui/1.11.1/jquery-ui.min.js"></script>
+</head>
+<body>
+<div>
+    <table style="margin: auto">
+        <table class="table_price" id="table1" style="float: left">
+            <caption>Users</caption>
+            <tr>
+                <th>Login</th>
+                <th colspan="2">Right</th>
+            </tr>
+        </table>
+        <table class="table_price" id="table2" style="float: left">
+            <caption>Add user</caption>
+            <tr>
+                <th>Login</th>
+                <th colspan="2">Password</th>
+                <th colspan="3">Right</th>
+            </tr>
+            <tr>
+                <td><input id="add_username"></td>
+                <td><input id="add_password" type="password"></td>
+                <td colspan="2">
+                    <select id="select1">
+                    </select>
+                </td>
+                <td>
+                    <button onclick="addUser()">Add</button>
+                </td>
+            </tr>
+        </table>
+        <table class="table_price" id="table3" style="float: left">
+            <caption onload="codeAddress();">Edit user</caption>
+            <tr>
+                <th>Select user</th>
+                <th>New Login</th>
+                <th>New Password</th>
+                <th>New Right</th>
+            </tr>
+            <tr>
+                <td>
+                    <select id="select2">
+                    </select>
+                </td>
+                <td><input id="edit_username"></td>
+                <td><input id="edit_password" type="password"></td>
+                <td colspan="2">
+                    <select id="select3">
+                    </select>
+                </td>
+                <td>
+                    <button onclick="editUser()">Edit</button>
+                </td>
+            </tr>
+        </table>
+        <table class="table_price" id="table4" style="float: left">
+            <caption onload="codeAddress();">LOGOUT</caption>
+            <tr>
+                <td>
+                    <button onclick="logOut()">***CLICK***</button>
+                </td>
+        </table>
+    </table>
+</div>
+</body>
+
+<script type="text/javascript">
+    var main_user
+
+    function logOut() {
+        localStorage.removeItem('token')
+        window.location.href = '/login'
+    }
+
+    function addUser() {
+        username = $("#add_username").val()
+        password = $("#add_password").val()
+        if (username && password) {
+            let data = {
+                username: username,
+                password: password,
+                right_id: $("#select1").val()
+            };
+            $.ajax({
+                type: "POST",
+                url: "/server/users",
+                dataType: "json",
+                data: JSON.stringify(data),
+                headers: {
+                    "Authorization": localStorage.getItem('token'),
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                success: function (result) {
+                    alert('Used added');
+                    window.location.reload();
+                },
+                error: function (result) {
+                    if (result.status === 401) {
+                        window.location.href = '/login'
+                    }
+                    else if (result.status === 403) {
+                        alert(result.statusText)
+                    }
+                    else if (result.status === 409) {
+                        alert('This user already exists')
+                    }
+                }
+            });
+        } else {
+            alert('Not all fields are filled')
+        }
+    }
+
+    function loadPage() {
+        $.ajax({
+            async: false,
+            type: "POST",
+            url: "/authorization/check/",
+            data: JSON.stringify({
+                token: localStorage.getItem('token')
+            }),
+            headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json"
+            },
+            success: function (result) {
+                main_user = result.user_id
+                if (result.access_token) {
+                    console.log('SET NEW TOKEN')
+                    localStorage.setItem('token', result.access_token);
+                }
+            },
+            error: function (result) {
+                if (result.status === 401) {
+                    window.location.href = '/login'
+                } else if (result.status === 403) {
+                    alert(result.statusText)
+                }
+            }
+        });
+
+
+        $.ajax({
+            type: "GET",
+            url: "/server/users",
+            headers: {"Authorization": localStorage.getItem('token')},
+            success: function (result) {
+                result.forEach((result) => {
+                    $('#table1 tr:last-child').after(
+                        '<tr>' +
+                        '<td>' + result.username + '</td>' +
+                        '<td>' + result.right.name + '</td>' +
+                        '<td><button onclick="deleteUser(id);" id="' + result.id + '">Delete</button></td>' +
+                        '</tr>'
+                    );
+                    $('#select2').append(
+                        '<option value="' + result.id + '">' + result.username + '</option>'
+                    );
+                });
+            },
+            error: function (result) {
+                if (result.status === 401) {
+                    window.location.href = '/login'
+                }
+                if (result.status === 403) {
+                    alert(result.statusText)
+                }
+            }
+        });
+
+        $.ajax({
+            type: "GET",
+            url: "/server/right",
+            headers: {"Authorization": localStorage.getItem('token')},
+            success: function (result) {
+                result.forEach((result) => {
+                    $('#select1').append(
+                        '<option value="' + result.id + '">' + result.name + '</option>'
+                    );
+                    $('#select3').append(
+                        '<option value="' + result.id + '">' + result.name + '</option>'
+                    );
+                });
+            },
+            error: function (result) {
+                if (result.status === 401) {
+                    window.location.href = '/login'
+                }
+                if (result.status === 403) {
+                    alert(result.statusText)
+                }
+            }
+        });
+    }
+
+    function deleteUser(id) {
+        $.ajax({
+            async: false,
+            type: "DELETE",
+            url: "/server/users/" + id,
+            headers: {"Authorization": localStorage.getItem('token')},
+            success: function (result) {
+                alert('Пользователь удален');
+                if (main_user === id) {
+                    localStorage.removeItem('token')
+                }
+                window.location.reload();
+            },
+            error: function (result) {
+                if (result.status === 401) {
+                    window.location.href = '/login'
+                } else if (result.status === 403) {
+                    alert(result.statusText)
+                }
+            }
+        });
+    }
+
+    function editUser() {
+        username = $("#edit_username").val()
+        password = $("#edit_password").val()
+        if (username && password) {
+            let data = {
+                username: username,
+                password: password,
+                right_id: $("#select3").val()
+            };
+            $.ajax({
+                type: "PUT",
+                url: "/server/users/" + $("#select2").val(),
+                dataType: "json",
+                data: JSON.stringify(data),
+                headers: {
+                    "Authorization": localStorage.getItem('token'),
+                    "Content-Type": "application/json",
+                    "accept": "application/json"
+                },
+                success: function (result) {
+                    alert('Used edit');
+                    window.location.reload();
+                },
+                error: function (result) {
+                    if (result.status === 401) {
+                        window.location.href = '/login'
+                    } else if (result.status === 403) {
+                        alert(result.statusText)
+                    }
+                }
+            });
+        } else {
+            alert('Not all fields are filled')
+        }
+    }
+
+    window.onload = loadPage;
+
+</script>
+
+
+<style>
+    .table_price {
+        border-collapse: collapse;
+        border-left: 3px solid #198d1e;
+        border-right: 3px solid #198d1e;
+        border-bottom: 3px solid #198d1e;
+    }
+
+    .table_price caption {
+        background: #198d1e;
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, .3);
+        color: white;
+        font-style: normal;
+        font-size: 26px;
+        text-align: center;
+        margin: 0;
+    }
+
+    .table_price td, .table_price th {
+        padding: 10px;
+    }
+
+    .table_price th {
+        text-align: left;
+        font-size: 18px;
+    }
+
+    .table_price tr:nth-child(2n) {
+        background: #E5E5E5;
+    }
+
+    .table_price td:last-of-type {
+        text-align: center;
+    }
+
+    .table_price button {
+        display: inline-block;
+        padding: 5px 10px;
+        background: #47b928;
+        box-shadow: 2px 2px 0 0 #8ad583;
+        position: relative;
+    }
+
+    .table_price button:hover {
+        box-shadow: none;
+        top: 2px;
+        left: 2px;
+    }
+</style>
